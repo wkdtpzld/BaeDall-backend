@@ -6,6 +6,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { Restaurant } from './restaurants/entities/restaurant.entity';
+import { UsersModule } from './users/users.module';
+import { CommonModule } from './common/common.module';
+import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
@@ -26,7 +29,6 @@ import { Restaurant } from './restaurants/entities/restaurant.entity';
       driver: ApolloDriver,
       autoSchemaFile: true,
     }),
-    RestaurantsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -34,9 +36,12 @@ import { Restaurant } from './restaurants/entities/restaurant.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [Restaurant],
+      entities: [User],
       synchronize: true,
+      logging: process.env.NODE_ENV !== 'prod',
     }),
+    UsersModule,
+    CommonModule,
   ],
   controllers: [],
   providers: [],
