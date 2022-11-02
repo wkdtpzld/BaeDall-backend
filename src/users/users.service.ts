@@ -4,11 +4,16 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateAccountInput } from './dtos/create-account.dto';
 import { LoginInput } from './dtos/login.dto';
+import * as jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from 'src/jwt/jwt.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    private readonly config: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async createAccount({
@@ -33,8 +38,6 @@ export class UserService {
     password,
   }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
     try {
-      // 아이디 && 비밀번호 찾기
-      // JWT 던지기
       const user = await this.users.findOne({ where: { email } });
       if (!user) {
         return {
@@ -49,9 +52,10 @@ export class UserService {
           error: 'Wrong Password',
         };
       }
+      const token = this.jwtService.sign({ id: user.id });
       return {
         ok: true,
-        token: '123',
+        token,
       };
     } catch (e) {
       return {
