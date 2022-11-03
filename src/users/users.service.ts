@@ -4,9 +4,9 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateAccountInput } from './dtos/create-account.dto';
 import { LoginInput } from './dtos/login.dto';
-import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -33,10 +33,12 @@ export class UserService {
     }
   }
 
-  async login({
-    email,
-    password,
-  }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
+  async login({ email, password }: LoginInput): Promise<{
+    ok: boolean;
+    error?: string;
+    accessToken?: string;
+    refreshToken?: string;
+  }> {
     try {
       const user = await this.users.findOne({ where: { email } });
       if (!user) {
@@ -52,10 +54,14 @@ export class UserService {
           error: 'Wrong Password',
         };
       }
-      const token = this.jwtService.sign({ id: user.id });
+      const accessToken = this.jwtService.sign({ id: user.id });
+      const refreshToken = this.jwtService.refresh({ id: user.id });
+      await this.users.update(user.id, { refreshToken });
+
       return {
         ok: true,
-        token,
+        accessToken,
+        refreshToken,
       };
     } catch (e) {
       return {
@@ -63,5 +69,28 @@ export class UserService {
         error: 'Login Failed occured ServerError',
       };
     }
+  }
+
+  async IsMatchRefreshToken(refreshToken: string, id: number) {
+    const user = await this.users.findOne({ where: { id } });
+
+    const isRefreshTokenMatch = await bcrypt.compare(
+      refreshToken,
+      user.refreshToken,
+    );
+
+    if (isRefreshTokenMatch) {
+      return user;
+    }
+  }
+
+  async removeRefreshToken(id: number) {
+    return this.users.update(id, {
+      refreshToken: null,
+    });
+  }
+
+  async findById(id: number): Promise<User> {
+    return this.users.findOne({ where: { id } });
   }
 }

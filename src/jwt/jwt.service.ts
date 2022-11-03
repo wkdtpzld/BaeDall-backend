@@ -15,11 +15,15 @@ export class JwtService {
   sign(payload: object): string {
     return jwt.sign(payload, this.options.privateKey, {
       algorithm: 'HS256',
-      expiresIn: '2h',
+      expiresIn: '10s',
     });
   }
 
-  verify(token: string) {
+  verify(token: string): {
+    ok: boolean;
+    decoded?: jwt.JwtPayload | string;
+    message?: string;
+  } {
     try {
       const decoded = jwt.verify(token, this.options.privateKey);
       return {
@@ -34,8 +38,8 @@ export class JwtService {
     }
   }
 
-  refresh(): string {
-    return jwt.sign({}, this.options.privateKey, {
+  refresh(payload: object): string {
+    return jwt.sign({ payload }, this.options.privateKey, {
       algorithm: 'HS256',
       expiresIn: '14d',
     });
