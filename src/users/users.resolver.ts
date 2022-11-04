@@ -1,5 +1,6 @@
-import { UseGuards } from '@nestjs/common';
+import { Req, UseGuards } from '@nestjs/common';
 import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
+import { Request, request } from 'express';
 import { AuthUser } from 'src/auth/auth-user.decorator';
 import { AuthGuard } from 'src/auth/auth.guard';
 import {
@@ -7,6 +8,7 @@ import {
   CreateAccountOutput,
 } from './dtos/create-account.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
+import { RefreshInput, RefreshOutput } from './dtos/refresh.dto';
 import { User } from './entities/user.entity';
 import { UserService } from './users.service';
 
@@ -45,6 +47,24 @@ export class UserResolver {
         ok: false,
         error: 'Error occured',
       };
+    }
+  }
+
+  @Mutation(() => RefreshOutput)
+  async refresh(
+    @Args('input') { accessToken, refreshToken }: RefreshInput,
+  ): Promise<RefreshOutput> {
+    try {
+      const { ok, accessToken: newAccessToken } =
+        await this.usersService.IsMatchRefreshToken(accessToken, refreshToken);
+      if (ok && newAccessToken) {
+        return {
+          ok,
+          accessToken: newAccessToken,
+        };
+      }
+    } catch (e) {
+      console.log(e);
     }
   }
 

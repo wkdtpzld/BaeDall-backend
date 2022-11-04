@@ -4,15 +4,12 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateAccountInput } from './dtos/create-account.dto';
 import { LoginInput } from './dtos/login.dto';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-    private readonly config: ConfigService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -55,7 +52,7 @@ export class UserService {
         };
       }
       const accessToken = this.jwtService.sign({ id: user.id });
-      const refreshToken = this.jwtService.refresh({ id: user.id });
+      const refreshToken = this.jwtService.refresh();
       await this.users.update(user.id, { refreshToken });
 
       return {
@@ -71,17 +68,27 @@ export class UserService {
     }
   }
 
-  async IsMatchRefreshToken(refreshToken: string, id: number) {
-    const user = await this.users.findOne({ where: { id } });
-
-    const isRefreshTokenMatch = await bcrypt.compare(
+  async IsMatchRefreshToken(accessToken: string, refreshToken: string) {
+    const { decode } = await this.jwtService.verify(accessToken);
+    const { id } = await this.users.findOne({
+      where: { id: decode.payload['id'] },
+    });
+    const { ok, decoded } = await this.jwtService.refreshVerify(
       refreshToken,
-      user.refreshToken,
+      id,
     );
 
-    if (isRefreshTokenMatch) {
-      return user;
+    if (ok && decoded) {
+      const newAccessToken = await this.jwtService.sign({ id });
+      return {
+        ok: true,
+        accessToken: newAccessToken,
+      };
     }
+
+    return {
+      ok: false,
+    };
   }
 
   async removeRefreshToken(id: number) {

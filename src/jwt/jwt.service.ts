@@ -15,17 +15,56 @@ export class JwtService {
   sign(payload: object): string {
     return jwt.sign(payload, this.options.privateKey, {
       algorithm: 'HS256',
-      expiresIn: '10s',
+      expiresIn: '1d',
     });
   }
 
   verify(token: string): {
     ok: boolean;
-    decoded?: jwt.JwtPayload | string;
+    verify?: jwt.JwtPayload | string;
+    decode?: jwt.Jwt;
     message?: string;
   } {
     try {
+      const verify = jwt.verify(token, this.options.privateKey);
+      const decode = jwt.decode(token, { complete: true });
+      return {
+        ok: true,
+        verify,
+        decode,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        message: e.message,
+      };
+    }
+  }
+
+  refresh(): string {
+    return jwt.sign({}, this.options.privateKey, {
+      algorithm: 'HS256',
+      expiresIn: '14d',
+    });
+  }
+
+  async refreshVerify(
+    token: string,
+    id: number,
+  ): Promise<{
+    ok: boolean;
+    decoded?: jwt.JwtPayload | string;
+    message?: string;
+  }> {
+    try {
       const decoded = jwt.verify(token, this.options.privateKey);
+      const user = await this.users.findOne({ where: { id } });
+      if (user.refreshToken !== token) {
+        return {
+          ok: false,
+          message: 'is not Matched Token',
+        };
+      }
       return {
         ok: true,
         decoded,
@@ -36,12 +75,5 @@ export class JwtService {
         message: e.message,
       };
     }
-  }
-
-  refresh(payload: object): string {
-    return jwt.sign({ payload }, this.options.privateKey, {
-      algorithm: 'HS256',
-      expiresIn: '14d',
-    });
   }
 }
