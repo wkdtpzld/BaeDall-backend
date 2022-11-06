@@ -1,6 +1,5 @@
-import { Req, UseGuards } from '@nestjs/common';
-import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
-import { Request, request } from 'express';
+import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AuthUser } from 'src/auth/auth-user.decorator';
 import { AuthGuard } from 'src/auth/auth.guard';
 import {
@@ -9,10 +8,12 @@ import {
 } from './dtos/create-account.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { RefreshInput, RefreshOutput } from './dtos/refresh.dto';
+import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dtol';
 import { User } from './entities/user.entity';
 import { UserService } from './users.service';
+import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
 
-@Resolver((of) => User)
+@Resolver(() => User)
 export class UserResolver {
   constructor(private readonly usersService: UserService) {}
 
@@ -77,5 +78,46 @@ export class UserResolver {
   @UseGuards(AuthGuard)
   me(@AuthUser() authUser: User) {
     return authUser;
+  }
+
+  @Query(() => UserProfileOutput)
+  @UseGuards(AuthGuard)
+  async userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
+    try {
+      const user = await this.usersService.findById(userProfileInput.userId);
+      if (!user) {
+        return {
+          ok: false,
+          error: 'User Not Found',
+        };
+      }
+      return {
+        ok: true,
+        user,
+      };
+    } catch {
+      return {
+        ok: false,
+        error: 'User Not Found',
+      };
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Mutation(() => EditProfileOutput)
+  async editProfile(
+    @AuthUser() authUser: User,
+    @Args('input') editProfileInput: EditProfileInput,
+  ): Promise<EditProfileOutput> {
+    try {
+      await this.usersService.editProfile(authUser.id, editProfileInput);
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
   }
 }

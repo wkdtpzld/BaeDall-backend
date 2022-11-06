@@ -1,5 +1,5 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { MutationOutput } from '../../common/dtos/output.dto';
+import { CoreOutput } from 'src/common/dtos/output.dto';
 
 @InputType()
 export class RefreshInput {
@@ -11,7 +11,7 @@ export class RefreshInput {
 }
 
 @ObjectType()
-export class RefreshOutput extends MutationOutput {
+export class RefreshOutput extends CoreOutput {
   @Field(() => String, { nullable: true })
   accessToken?: string;
 
