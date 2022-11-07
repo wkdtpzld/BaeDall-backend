@@ -6,11 +6,14 @@ import { CreateAccountInput } from './dtos/create-account.dto';
 import { LoginInput } from './dtos/login.dto';
 import { JwtService } from 'src/jwt/jwt.service';
 import { EditProfileInput } from './dtos/edit-profile.dto';
+import { Verification } from './entities/verification.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Verification)
+    private readonly verification: Repository<Verification>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -24,7 +27,14 @@ export class UserService {
       if (exists) {
         return { ok: false, error: '등록된 이메일입니다.' };
       }
-      await this.users.save(this.users.create({ email, password, role }));
+      const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+      await this.verification.save(
+        this.verification.create({
+          user,
+        }),
+      );
       return { ok: true };
     } catch (e) {
       return { ok: false, error: 'Couldn`t create account' };
@@ -102,10 +112,33 @@ export class UserService {
     return this.users.findOne({ where: { id } });
   }
 
-  async editProfile(userId: number, { email, password }: EditProfileInput) {
-    return this.users.update(userId, {
-      email,
-      password,
+  async editProfile(
+    userId: number,
+    editProfileInput: EditProfileInput,
+  ): Promise<User> {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (editProfileInput.email) {
+      user.email = editProfileInput.email;
+      user.verified = false;
+      await this.verification.save(this.verification.create({ user }));
+    }
+
+    if (editProfileInput.password) {
+      user.password = editProfileInput.password;
+    }
+
+    return await this.users.save(user);
+  }
+
+  async verifyEmail(code: string): Promise<boolean> {
+    const verification = await this.verification.findOne({
+      where: { code },
+      relations: ['user'],
     });
+    if (verification) {
+      verification.user.verified = true;
+      this.users.save(verification.user);
+    }
+    return false;
   }
 }
