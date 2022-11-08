@@ -2,11 +2,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { CreateAccountInput } from './dtos/create-account.dto';
-import { LoginInput } from './dtos/login.dto';
+import {
+  CreateAccountInput,
+  CreateAccountOutput,
+} from './dtos/create-account.dto';
+import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { JwtService } from 'src/jwt/jwt.service';
-import { EditProfileInput } from './dtos/edit-profile.dto';
+import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
 import { Verification } from './entities/verification.entity';
+import { UserProfileOutput } from './dtos/user-profile.dtol';
+import { VerifyEmailOutput } from './dtos/verify-email.dto';
 
 @Injectable()
 export class UserService {
@@ -21,7 +26,7 @@ export class UserService {
     email,
     password,
     role,
-  }: CreateAccountInput): Promise<{ ok: boolean; error?: string }> {
+  }: CreateAccountInput): Promise<CreateAccountOutput> {
     try {
       const exists = await this.users.findOne({ where: { email } });
       if (exists) {
@@ -41,14 +46,12 @@ export class UserService {
     }
   }
 
-  async login({ email, password }: LoginInput): Promise<{
-    ok: boolean;
-    error?: string;
-    accessToken?: string;
-    refreshToken?: string;
-  }> {
+  async login({ email, password }: LoginInput): Promise<LoginOutput> {
     try {
-      const user = await this.users.findOne({ where: { email } });
+      const user = await this.users.findOne({
+        where: { email },
+        select: ['password', 'id'],
+      });
       if (!user) {
         return {
           ok: false,
@@ -80,26 +83,28 @@ export class UserService {
   }
 
   async IsMatchRefreshToken(accessToken: string, refreshToken: string) {
-    const { decode } = await this.jwtService.verify(accessToken);
-    const { id } = await this.users.findOne({
-      where: { id: decode.payload['id'] },
-    });
-    const { ok, decoded } = await this.jwtService.refreshVerify(
-      refreshToken,
-      id,
-    );
+    try {
+      const { decode } = this.jwtService.verify(accessToken);
+      const { id } = await this.users.findOne({
+        where: { id: decode.payload['id'] },
+      });
+      const { ok, decoded } = await this.jwtService.refreshVerify(
+        refreshToken,
+        id,
+      );
 
-    if (ok && decoded) {
-      const newAccessToken = await this.jwtService.sign({ id });
+      if (ok && decoded) {
+        const newAccessToken = this.jwtService.sign({ id });
+        return {
+          ok: true,
+          accessToken: newAccessToken,
+        };
+      }
+    } catch (e) {
       return {
-        ok: true,
-        accessToken: newAccessToken,
+        ok: false,
       };
     }
-
-    return {
-      ok: false,
-    };
   }
 
   async removeRefreshToken(id: number) {
@@ -108,37 +113,57 @@ export class UserService {
     });
   }
 
-  async findById(id: number): Promise<User> {
-    return this.users.findOne({ where: { id } });
+  async findById(id: number): Promise<UserProfileOutput> {
+    try {
+      const user = await this.users.findOne({ where: { id } });
+      if (user) {
+        return {
+          ok: true,
+          user,
+        };
+      }
+    } catch (e) {
+      return { ok: false, error: 'User Not Found' };
+    }
   }
 
   async editProfile(
     userId: number,
-    editProfileInput: EditProfileInput,
-  ): Promise<User> {
-    const user = await this.users.findOne({ where: { id: userId } });
-    if (editProfileInput.email) {
-      user.email = editProfileInput.email;
-      user.verified = false;
-      await this.verification.save(this.verification.create({ user }));
+    { email, password }: EditProfileInput,
+  ): Promise<EditProfileOutput> {
+    try {
+      const user = await this.users.findOne({ where: { id: userId } });
+      if (email) {
+        user.email = email;
+        user.verified = false;
+        await this.verification.save(this.verification.create({ user }));
+      }
+      if (password) {
+        user.password = password;
+      }
+      await this.users.save(user);
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      return { ok: false, error: 'Could not update Profile' };
     }
-
-    if (editProfileInput.password) {
-      user.password = editProfileInput.password;
-    }
-
-    return await this.users.save(user);
   }
 
-  async verifyEmail(code: string): Promise<boolean> {
-    const verification = await this.verification.findOne({
-      where: { code },
-      relations: ['user'],
-    });
-    if (verification) {
-      verification.user.verified = true;
-      this.users.save(verification.user);
+  async verifyEmail(code: string): Promise<VerifyEmailOutput> {
+    try {
+      const verification = await this.verification.findOne({
+        where: { code },
+        relations: ['user'],
+      });
+      if (verification) {
+        verification.user.verified = true;
+        this.users.save(verification.user);
+        return { ok: true };
+      }
+      throw new Error();
+    } catch (error) {
+      return { ok: false, error };
     }
-    return false;
   }
 }
