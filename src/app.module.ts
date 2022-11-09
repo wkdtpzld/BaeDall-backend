@@ -60,6 +60,8 @@ import { MailModule } from './mail/mail.module';
       apiKey: process.env.EMAIL_API_KEY,
       domain: process.env.EMAIL_DOMAIN,
       fromEmail: process.env.EMAIL_FROM_EMAIL,
+      email: process.env.NODE_EAMIL,
+      password: process.env.NODE_PASSWORD,
     }),
     UsersModule,
     AuthModule,
