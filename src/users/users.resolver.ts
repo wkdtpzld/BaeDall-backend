@@ -8,7 +8,7 @@ import {
 } from './dtos/create-account.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { RefreshInput, RefreshOutput } from './dtos/refresh.dto';
-import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dtol';
+import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
 import { User } from './entities/user.entity';
 import { UserService } from './users.service';
 import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';

@@ -10,7 +10,7 @@ import { LoginInput, LoginOutput } from './dtos/login.dto';
 import { JwtService } from 'src/jwt/jwt.service';
 import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
 import { Verification } from './entities/verification.entity';
-import { UserProfileOutput } from './dtos/user-profile.dtol';
+import { UserProfileOutput } from './dtos/user-profile.dto';
 import { VerifyEmailOutput } from './dtos/verify-email.dto';
 import { MailService } from '../mail/mail.service';
 
@@ -110,15 +110,15 @@ export class UserService {
     }
   }
 
-  async removeRefreshToken(id: number) {
-    return this.users.update(id, {
-      refreshToken: null,
-    });
-  }
+  // async removeRefreshToken(id: number) {
+  //   return this.users.update(id, {
+  //     refreshToken: null,
+  //   });
+  // }
 
   async findById(id: number): Promise<UserProfileOutput> {
     try {
-      const user = await this.users.findOne({ where: { id } });
+      const user = await this.users.findOneOrFail({ where: { id } });
       if (user) {
         return {
           ok: true,
@@ -168,9 +168,9 @@ export class UserService {
         await this.verification.delete(verification.id);
         return { ok: true };
       }
-      throw new Error();
+      return { ok: false, error: 'Verification not found' };
     } catch (error) {
-      return { ok: false, error };
+      return { ok: false, error: 'Could not verify Email' };
     }
   }
 }
