@@ -20,10 +20,9 @@ export class JwtService {
   }
 
   verify(token: string): {
-    ok: boolean;
     verify?: jwt.JwtPayload | string;
     decode?: jwt.Jwt;
-    message?: string;
+    ok: boolean;
   } {
     try {
       const verify = jwt.verify(token, this.options.privateKey);
@@ -36,7 +35,6 @@ export class JwtService {
     } catch (e) {
       return {
         ok: false,
-        message: e.message,
       };
     }
   }
