@@ -88,21 +88,25 @@ export class UserService {
   async IsMatchRefreshToken(accessToken: string, refreshToken: string) {
     try {
       const { decode } = this.jwtService.verify(accessToken);
-      const { id } = await this.users.findOne({
+      const user = await this.users.findOne({
         where: { id: decode.payload['id'] },
       });
-      const { ok, decoded } = await this.jwtService.refreshVerify(
+      const { ok, decoded, message } = await this.jwtService.refreshVerify(
         refreshToken,
-        id,
+        user.id,
       );
 
       if (ok && decoded) {
-        const newAccessToken = this.jwtService.sign({ id });
+        const newAccessToken = this.jwtService.sign({ id: user.id });
         return {
           ok: true,
           accessToken: newAccessToken,
         };
       }
+      return {
+        ok: false,
+        message,
+      };
     } catch (e) {
       return {
         ok: false,

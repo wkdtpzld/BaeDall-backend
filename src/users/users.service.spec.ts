@@ -16,16 +16,41 @@ const mockRepository = () => ({
   delete: jest.fn(),
 });
 
-const mockJwtService = {
+const mockJwtService = () => ({
   sign: jest.fn(() => 'signed-token'),
-  verify: jest.fn(),
+  verify: jest.fn(() => {
+    return {
+      ok: true,
+      decode: {
+        payload: [
+          {
+            id: 1,
+          },
+        ],
+      },
+    };
+  }),
   refresh: jest.fn(() => 'refresh-token'),
-};
+  refreshVerify: jest.fn((token: string) => {
+    if (token === 'refreshtoken') {
+      return {
+        ok: true,
+        decoded: true,
+      };
+    } else {
+      return {
+        ok: true,
+        decoded: false,
+        message: 'is not Matched Token',
+      };
+    }
+  }),
+});
 
-const mockMailService = {
+const mockMailService = () => ({
   sendEmail: jest.fn(),
   sendVerificationEmail: jest.fn(),
-};
+});
 
 type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -50,11 +75,11 @@ describe('UserService', () => {
         },
         {
           provide: JwtService,
-          useValue: mockJwtService,
+          useValue: mockJwtService(),
         },
         {
           provide: MailService,
-          useValue: mockMailService,
+          useValue: mockMailService(),
         },
       ],
     }).compile();
@@ -305,6 +330,64 @@ describe('UserService', () => {
       veriifcationRepository.findOne.mockRejectedValue(new Error());
       const result = await service.verifyEmail('');
       expect(result).toEqual({ ok: false, error: 'Could not verify Email' });
+    });
+  });
+
+  describe('IsMatchRefreshToken', () => {
+    it('should Match user Refreshtoken', async () => {
+      userRepository.findOne.mockResolvedValue({
+        id: 1,
+        refreshToken: 'refreshtoken',
+      });
+      const result = await service.IsMatchRefreshToken(
+        'accesstoken',
+        'refreshtoken',
+      );
+
+      expect(jwtService.verify).toHaveBeenCalledTimes(1);
+      expect(jwtService.verify).toHaveBeenCalledWith(expect.any(String));
+
+      expect(jwtService.refreshVerify).toHaveBeenCalledTimes(1);
+      expect(jwtService.refreshVerify).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Number),
+      );
+
+      expect(jwtService.sign).toHaveBeenCalledTimes(1);
+      expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Object));
+
+      expect(result).toEqual({ ok: true, accessToken: 'signed-token' });
+    });
+    it('should Not Match user RefreshToken', async () => {
+      userRepository.findOne.mockResolvedValue({
+        id: 1,
+        refreshToken: 'refreshtoken',
+      });
+
+      const result = await service.IsMatchRefreshToken(
+        'accesstoken',
+        'Fakerefreshtoken',
+      );
+
+      expect(jwtService.verify).toHaveBeenCalledTimes(1);
+      expect(jwtService.verify).toHaveBeenCalledWith(expect.any(String));
+
+      expect(jwtService.refreshVerify).toHaveBeenCalledTimes(1);
+      expect(jwtService.refreshVerify).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Number),
+      );
+
+      expect(result).toEqual({ ok: false, message: 'is not Matched Token' });
+    });
+
+    it('should Not Found User', async () => {
+      userRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.IsMatchRefreshToken(
+        'accesstoken',
+        'refreshtoken',
+      );
+      expect(result).toEqual({ ok: false });
     });
   });
   it.todo('createAccount');

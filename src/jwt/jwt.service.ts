@@ -72,7 +72,7 @@ export class JwtService {
     } catch (e) {
       return {
         ok: false,
-        message: e.message,
+        message: 'refreshVerify Failed',
       };
     }
   }
