@@ -105,11 +105,12 @@ export class UserService {
       }
       return {
         ok: false,
-        message,
+        error: message,
       };
     } catch (e) {
       return {
         ok: false,
+        error: 'Failed Server Error',
       };
     }
   }
@@ -143,6 +144,7 @@ export class UserService {
       if (email) {
         user.email = email;
         user.verified = false;
+        this.verification.delete({ user: { id: user.id } });
         const verification = await this.verification.save(
           this.verification.create({ user }),
         );

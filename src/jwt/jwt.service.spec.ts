@@ -12,7 +12,12 @@ const USER_ID = 1;
 type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 const mockRepository = () => ({
-  findOne: jest.fn(),
+  findOne: jest.fn(
+    () =>
+      function sendMail() {
+        return null;
+      },
+  ),
 });
 
 jest.mock('jsonwebtoken', () => {
