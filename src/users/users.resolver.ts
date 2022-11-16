@@ -13,6 +13,7 @@ import { User } from './entities/user.entity';
 import { UserService } from './users.service';
 import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
 import { VerifyEmailOutput, VerifyEmailInput } from './dtos/verify-email.dto';
+import { Role } from 'src/auth/role.decorator';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -54,13 +55,13 @@ export class UserResolver {
   }
 
   @Query(() => User)
-  @UseGuards(AuthGuard)
+  @Role(['Any'])
   me(@AuthUser() authUser: User) {
     return authUser;
   }
 
-  @Query(() => UserProfileOutput)
   @UseGuards(AuthGuard)
+  @Query(() => UserProfileOutput)
   async userProfile(
     @Args() userProfileInput: UserProfileInput,
   ): Promise<UserProfileOutput> {

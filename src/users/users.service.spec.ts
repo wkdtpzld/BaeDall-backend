@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserService } from './users.service';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { Verification } from './entities/verification.entity';
 import { JwtService } from '../jwt/jwt.service';
 import { MailService } from 'src/mail/mail.service';
@@ -98,7 +98,7 @@ describe('UserService', () => {
     const createAccountArgs = {
       email: '',
       password: '',
-      role: 0,
+      role: UserRole.Client,
     };
     it('should fail if user exists', async () => {
       userRepository.findOne.mockResolvedValue({
@@ -378,7 +378,7 @@ describe('UserService', () => {
         expect.any(Number),
       );
 
-      expect(result).toEqual({ ok: false, message: 'is not Matched Token' });
+      expect(result).toEqual({ ok: false, error: 'is not Matched Token' });
     });
 
     it('should Not Found User', async () => {
@@ -387,13 +387,7 @@ describe('UserService', () => {
         'accesstoken',
         'refreshtoken',
       );
-      expect(result).toEqual({ ok: false });
+      expect(result).toEqual({ error: 'Failed Server Error', ok: false });
     });
   });
-  it.todo('createAccount');
-  it.todo('login');
-  it.todo('findById');
-  it.todo('editProfile');
-  it.todo('verifyEmail');
-  it.todo('IsMatchRefreshToken');
 });

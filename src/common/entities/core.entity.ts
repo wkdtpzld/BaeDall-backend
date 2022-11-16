@@ -6,7 +6,6 @@ import {
 } from 'typeorm';
 
 @ObjectType()
-@InputType()
 export class CoreEntity {
   @PrimaryGeneratedColumn()
   @Field(() => Number)
