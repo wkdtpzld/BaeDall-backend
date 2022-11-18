@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { AllowedRoles } from './role.decorator';
 import { User } from 'src/users/entities/user.entity';
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}

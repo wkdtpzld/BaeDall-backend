@@ -38,8 +38,8 @@ export class UserResolver {
     return this.usersService.IsMatchRefreshToken(accessToken, refreshToken);
   }
 
-  @UseGuards(AuthGuard)
   @Mutation(() => EditProfileOutput)
+  @Role(['Any'])
   async editProfile(
     @AuthUser() authUser: User,
     @Args('input') editProfileInput: EditProfileInput,
@@ -60,8 +60,8 @@ export class UserResolver {
     return authUser;
   }
 
-  @UseGuards(AuthGuard)
   @Query(() => UserProfileOutput)
+  @Role(['Any'])
   async userProfile(
     @Args() userProfileInput: UserProfileInput,
   ): Promise<UserProfileOutput> {

@@ -1,6 +1,6 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { IsString } from 'class-validator';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { CoreEntity } from '../../common/entities/core.entity';
 import { Restaurant } from './restaurant.entity';
 
@@ -25,5 +25,6 @@ export class Category extends CoreEntity {
   @Field(() => String)
   @Column({ unique: true })
   @IsString()
+  @Index()
   slug: string;
 }
