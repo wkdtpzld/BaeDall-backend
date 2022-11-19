@@ -11,7 +11,7 @@ export class RestaurantRepository extends Repository<Restaurant> {
   }
 
   async IsMatchOwner(owner: User, restaurantId: number): Promise<CoreOutput> {
-    const restaurant = await this.findOneOrFail({
+    const restaurant = await this.findOne({
       where: { id: restaurantId },
       loadRelationIds: true,
     });

@@ -25,7 +25,7 @@ import {
   EditRestaurantInput,
 } from './dtos/edit-restaurant.dto';
 import { AllCategoriesOutput } from './dtos/all-categories.dto';
-import { CategoryInput, CategoryOutput } from './dtos/category.to';
+import { CategoryInput, CategoryOutput } from './dtos/category.dto';
 import { RestaurantsInput, RestaurantsOutput } from './dtos/restaurant.dto';
 import { RestaurantInput, RestaurantOutput } from './dtos/restaurant.dto.';
 import {

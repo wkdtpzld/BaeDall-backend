@@ -17,7 +17,7 @@ import {
 } from './dtos/delete-restaurant.dto';
 import { RestaurantRepository } from './repositories/restaurant.repository';
 import { AllCategoriesOutput } from './dtos/all-categories.dto';
-import { CategoryInput, CategoryOutput } from './dtos/category.to';
+import { CategoryInput, CategoryOutput } from './dtos/category.dto';
 import { RestaurantsInput, RestaurantsOutput } from './dtos/restaurant.dto';
 import { RestaurantInput, RestaurantOutput } from './dtos/restaurant.dto.';
 import {
@@ -38,7 +38,9 @@ export class RestaurantService {
     createRestaurantInput: CreateRestaurantInput,
   ): Promise<CreateRestaurantOutput> {
     try {
-      const newRestaurant = this.restaurants.create(createRestaurantInput);
+      const newRestaurant = await this.restaurants.create(
+        createRestaurantInput,
+      );
       newRestaurant.owner = owner;
       const category = await this.categories.getOrCreate(
         createRestaurantInput.categoryName,
@@ -61,11 +63,11 @@ export class RestaurantService {
     editRestaurantInput: EditRestaurantInput,
   ): Promise<EditRestaurantOutput> {
     try {
-      await this.restaurants.IsMatchOwner(
+      const IsMatch = await this.restaurants.IsMatchOwner(
         owner,
         editRestaurantInput.restaurantId,
       );
-
+      if (IsMatch) return IsMatch;
       let category: Category = null;
 
       if (editRestaurantInput.categoryName) {
@@ -98,11 +100,11 @@ export class RestaurantService {
     deleteRestaurantInput: DeleteRestaurantInput,
   ): Promise<DeleteRestaurantOutput> {
     try {
-      await this.restaurants.IsMatchOwner(
+      const IsNotOwenr = await this.restaurants.IsMatchOwner(
         owner,
         deleteRestaurantInput.restaurantId,
       );
-
+      if (IsNotOwenr) return IsNotOwenr;
       await this.restaurants.delete(deleteRestaurantInput.restaurantId);
 
       return {
@@ -165,6 +167,7 @@ export class RestaurantService {
         ok: true,
         category,
         totalPage: Math.ceil(totalResults / 20),
+        totalItems: totalResults,
       };
     } catch (e) {
       return {
