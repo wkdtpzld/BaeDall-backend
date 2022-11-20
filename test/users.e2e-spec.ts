@@ -6,6 +6,8 @@ import { DataSource, Repository } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Restaurant } from '../src/restaurants/entities/restaurant.entity';
+import { Category } from '../src/restaurants/entities/category.entity';
 
 describe('UserModule (e2e)', () => {
   let app: INestApplication;
@@ -21,7 +23,7 @@ describe('UserModule (e2e)', () => {
   const baseTest = () => request(app.getHttpServer()).post(GRAPH_END_POINT);
   const publicTest = (query: string) => baseTest().send({ query });
   const privateTest = (query: string) =>
-    baseTest().set('X-JWT', accessToken).send({ query });
+    baseTest().set('x-jwt', accessToken).send({ query });
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -46,7 +48,7 @@ describe('UserModule (e2e)', () => {
       password: process.env.DB_PASSWORD,
       synchronize: true,
       logging: false,
-      entities: [User, Verification],
+      entities: [User, Verification, Restaurant, Category],
     });
     const connection = await dataSource.initialize();
     await connection.dropDatabase();
@@ -401,7 +403,6 @@ describe('UserModule (e2e)', () => {
               },
             },
           } = res;
-          console.log(ok, error, accessToken);
           expect(ok).toBe(false);
           expect(error).toEqual(expect.any(String));
           expect(accessToken).toBe(null);
