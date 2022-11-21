@@ -19,6 +19,8 @@ import { MailModule } from './mail/mail.module';
 import { Restaurant } from './restaurants/entities/restaurant.entity';
 import { Category } from './restaurants/entities/category.entity';
 import { RestaurantsModule } from './restaurants/restaurants.module';
+import { DishModule } from './dish/dish.module';
+import { Dish } from './dish/entites/dish.entity';
 
 @Module({
   imports: [
@@ -52,7 +54,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [User, Verification, Restaurant, Category],
+      entities: [User, Verification, Restaurant, Category, Dish],
       synchronize: true,
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
@@ -71,6 +73,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
     AuthModule,
     MailModule,
     RestaurantsModule,
+    DishModule,
   ],
   controllers: [],
   providers: [],

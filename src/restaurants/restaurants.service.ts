@@ -25,12 +25,14 @@ import {
   SearchRestaurantOutput,
 } from './dtos/search-restaurant.dto';
 import { ILike } from 'typeorm';
+import { DishRepository } from '../dish/repository/dishes-repository';
 
 @Injectable()
 export class RestaurantService {
   constructor(
     private readonly restaurants: RestaurantRepository,
     private readonly categories: CategoryRepository,
+    private readonly dishes: DishRepository,
   ) {}
 
   async createRestaurant(
@@ -204,6 +206,7 @@ export class RestaurantService {
     try {
       const restaurant = await this.restaurants.findOne({
         where: { id: restaurantInput.restaurantId },
+        relations: ['menu'],
       });
 
       if (!restaurant) {
