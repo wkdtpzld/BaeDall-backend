@@ -23,7 +23,7 @@ import { DishModule } from './dish/dish.module';
 import { Dish } from './dish/entites/dish.entity';
 import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
-import { OrderDish } from './orders/entities/orderDish.entity';
+import { OrderItem } from './orders/entities/order-item.entity';
 
 @Module({
   imports: [
@@ -64,7 +64,7 @@ import { OrderDish } from './orders/entities/orderDish.entity';
         Category,
         Dish,
         Order,
-        OrderDish,
+        OrderItem,
       ],
       synchronize: true,
       logging:

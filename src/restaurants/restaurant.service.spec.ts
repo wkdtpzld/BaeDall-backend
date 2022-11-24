@@ -33,6 +33,8 @@ const userArgs: User = {
   hashPassword: jest.fn(),
   verified: true,
   restaurants: null,
+  orders: null,
+  rides: null,
 };
 
 const category: Category = {
