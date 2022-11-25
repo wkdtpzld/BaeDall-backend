@@ -6,6 +6,7 @@ import { CategoryRepository } from './repositories/categories.repository';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Category } from './entities/category.entity';
 import { ILike } from 'typeorm';
+import { DishRepository } from 'src/dish/repository/dishes-repository';
 
 const mockRepository = () => ({
   find: jest.fn(),
@@ -52,6 +53,7 @@ describe('restaurantService', () => {
   let restaurantRepository: Partial<
     Record<keyof RestaurantRepository, jest.Mock>
   >;
+  let dishRepository: Partial<Record<keyof DishRepository, jest.Mock>>;
   let categoryRepository: Partial<Record<keyof CategoryRepository, jest.Mock>>;
 
   beforeEach(async () => {
@@ -66,11 +68,16 @@ describe('restaurantService', () => {
           provide: getRepositoryToken(RestaurantRepository),
           useValue: mockRepository(),
         },
+        {
+          provide: getRepositoryToken(DishRepository),
+          useValue: mockRepository(),
+        },
       ],
     }).compile();
     service = module.get<RestaurantService>(RestaurantService);
     restaurantRepository = module.get(getRepositoryToken(RestaurantRepository));
     categoryRepository = module.get(getRepositoryToken(CategoryRepository));
+    dishRepository = module.get(getRepositoryToken(DishRepository));
   });
 
   it('to be defined', () => {
@@ -110,7 +117,6 @@ describe('restaurantService', () => {
       });
     });
   });
-
   describe('editRestaurant', () => {
     const editProfileInputArgs = {
       categoryName: 'editName',
@@ -193,7 +199,6 @@ describe('restaurantService', () => {
       expect(result).toEqual({ ok: false, error: 'Could not edit Restaurant' });
     });
   });
-
   describe('deleteRestaurant', () => {
     const deleteRestaurantInput = {
       restaurantId: 1,
@@ -414,6 +419,7 @@ describe('restaurantService', () => {
       expect(restaurantRepository.findOne).toHaveBeenCalledTimes(1);
       expect(restaurantRepository.findOne).toHaveBeenCalledWith({
         where: { id: restaurantArgs.restaurantId },
+        relations: ['menu'],
       });
 
       expect(result).toEqual({

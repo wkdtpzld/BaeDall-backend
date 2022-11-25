@@ -79,7 +79,7 @@ export class OrdersService {
       return {
         ok: true,
       };
-    } catch {
+    } catch (e) {
       return {
         ok: false,
         error: 'Could not CreateOrder',

@@ -8,6 +8,9 @@ import * as request from 'supertest';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Restaurant } from '../src/restaurants/entities/restaurant.entity';
 import { Category } from '../src/restaurants/entities/category.entity';
+import { Order } from 'src/orders/entities/order.entity';
+import { OrderItem } from '../src/orders/entities/order-item.entity';
+import { Dish } from '../src/dish/entites/dish.entity';
 
 describe('UserModule (e2e)', () => {
   let app: INestApplication;
@@ -48,7 +51,15 @@ describe('UserModule (e2e)', () => {
       password: process.env.DB_PASSWORD,
       synchronize: true,
       logging: false,
-      entities: [User, Verification, Restaurant, Category],
+      entities: [
+        User,
+        Verification,
+        Restaurant,
+        Category,
+        Order,
+        OrderItem,
+        Dish,
+      ],
     });
     const connection = await dataSource.initialize();
     await connection.dropDatabase();

@@ -10,6 +10,12 @@ import { Category } from '../src/restaurants/entities/category.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RestaurantRepository } from '../src/restaurants/repositories/restaurant.repository';
 import { CategoryRepository } from '../src/restaurants/repositories/categories.repository';
+import { DishRepository } from '../src/dish/repository/dishes-repository';
+import { Dish } from 'src/dish/entites/dish.entity';
+import { Order } from 'src/orders/entities/order.entity';
+import { OrderItem } from '../src/orders/entities/order-item.entity';
+import { OrderRepository } from '../src/orders/repository/order.repository';
+import { OrderItemRepository } from '../src/orders/repository/orderItem.repository';
 
 describe('RestaurantModule (e2e)', () => {
   let app: INestApplication;
@@ -18,9 +24,14 @@ describe('RestaurantModule (e2e)', () => {
   let refreshToken: string;
   let secondAccessToken: string;
   let secondRefreshToken: string;
+  let clientAccessToken: string;
+  let clientRefreshToken: string;
   let userRepository: Repository<User>;
   let restaurantRepository: RestaurantRepository;
   let categoryRepository: CategoryRepository;
+  let dishRepository: DishRepository;
+  let orderRepository: OrderRepository;
+  let orderItemRepository: OrderItemRepository;
 
   const GRAPH_END_POINT = '/graphql';
   const EMAIL = 'slwhswk@naver.com';
@@ -33,6 +44,9 @@ describe('RestaurantModule (e2e)', () => {
 
   const secondUserPrivateTest = (query: string) =>
     baseTest().set('x-jwt', secondAccessToken).send({ query });
+
+  const ClientPrivateTest = (query: string) =>
+    baseTest().set('x-jwt', clientAccessToken).send({ query });
 
   const fakePrivateTest = (query: string) =>
     baseTest().set('x-jwt', 'fakeToken').send({ query });
@@ -49,6 +63,11 @@ describe('RestaurantModule (e2e)', () => {
     categoryRepository = moduleFixture.get(
       getRepositoryToken(CategoryRepository),
     );
+    dishRepository = moduleFixture.get(getRepositoryToken(DishRepository));
+    orderItemRepository = moduleFixture.get(
+      getRepositoryToken(OrderItemRepository),
+    );
+    orderRepository = moduleFixture.get(getRepositoryToken(OrderRepository));
     await app.init();
     server = app.getHttpServer();
   });
@@ -63,7 +82,15 @@ describe('RestaurantModule (e2e)', () => {
       password: process.env.DB_PASSWORD,
       synchronize: true,
       logging: false,
-      entities: [User, Verification, Restaurant, Category],
+      entities: [
+        User,
+        Verification,
+        Restaurant,
+        Category,
+        Dish,
+        Order,
+        OrderItem,
+      ],
     });
     const connection = await dataSource.initialize();
     await connection.dropDatabase();
@@ -98,6 +125,25 @@ describe('RestaurantModule (e2e)', () => {
             email: "${EMAIL}2",
             password: "${PASSWORD}2",
             role: Owner
+          }) {
+            error
+            ok
+          }
+        }`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.data.createAccount.ok).toBe(true);
+          expect(res.body.data.createAccount.error).toBe(null);
+        });
+    });
+
+    it('should create client account', () => {
+      return publicTest(`
+        mutation {
+          createAccount(input: {
+            email: "${EMAIL}3",
+            password: "${PASSWORD}3",
+            role: Client
           }) {
             error
             ok
@@ -165,6 +211,35 @@ describe('RestaurantModule (e2e)', () => {
           expect(login.accessToken).toEqual(expect.any(String));
           secondAccessToken = login.accessToken;
           secondRefreshToken = login.refreshToken;
+        });
+    });
+
+    it('should login with correct credentials', () => {
+      return publicTest(`
+          mutation {
+            login(input: {
+              email: "${EMAIL}3",
+              password: "${PASSWORD}3"
+            }) {
+              ok
+              error
+              accessToken
+              refreshToken
+            }
+          }
+        `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          expect(login.ok).toBe(true);
+          expect(login.error).toBe(null);
+          expect(login.accessToken).toEqual(expect.any(String));
+          clientAccessToken = login.accessToken;
+          clientRefreshToken = login.refreshToken;
         });
     });
   });
@@ -343,13 +418,24 @@ describe('RestaurantModule (e2e)', () => {
       return publicTest(`
       {
         restaurant(input: {
-          restaurantId: ${restaurantId}
+          restaurantId: ${restaurantId},
         }) {
           ok
           error
           restaurant {
             id
             name
+            menu {
+              name
+              options {
+                name
+                choices {
+                  name
+                  extra
+                }
+                extra
+              }
+            }
           }
         }
       }
@@ -364,7 +450,7 @@ describe('RestaurantModule (e2e)', () => {
 
           expect(restaurant.ok).toBe(true);
           expect(restaurant.error).toBe(null);
-          expect(restaurant.restaurant).toEqual(Object);
+          expect(restaurant.restaurant).toEqual(expect.any(Object));
         });
     });
 
@@ -469,7 +555,7 @@ describe('RestaurantModule (e2e)', () => {
       {
         category(input: {
           page: 1,
-          slug: "${slug}",
+          slug: "${slug}"
         }) {
           ok
           error
@@ -478,6 +564,8 @@ describe('RestaurantModule (e2e)', () => {
           category {
             id
             name
+            restaurantCount
+            coverImg
           }
         }
       }
@@ -494,7 +582,402 @@ describe('RestaurantModule (e2e)', () => {
           expect(category.error).toBe(null);
           expect(category.totalPage).toEqual(expect.any(Number));
           expect(category.totalItems).toEqual(expect.any(Number));
-          expect(category.category).toEqual(expect.any(Array));
+          expect(category.category).toEqual(expect.any(Object));
+        });
+    });
+  });
+
+  describe('createDish', () => {
+    const restaurantId = 1;
+    const fakeRestaurantId = 9999;
+    it('should return success createDish', () => {
+      return privateTest(`
+      mutation {
+        createDish(input: {
+          restaurantId: ${restaurantId},
+          name: "fried",
+          price: 10,
+          description: "pure chicken"
+          options: [
+            {
+              name: "Spice Level",
+              choices: [{name: "1"}, {name: "2"}],
+              extra: 0
+            },
+            {
+              name: "Size",
+              choices: [{name: "1", extra: 2}, {name: "2", extra: 4}],
+              extra: 0
+            },
+            {
+              name: "Pickle",
+              extra: 1
+            }
+          ]
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { createDish },
+            },
+          } = res;
+
+          expect(createDish.ok).toBe(true);
+          expect(createDish.error).toBe(null);
+        });
+    });
+
+    it('should return not found restaurant', () => {
+      return privateTest(`
+      mutation {
+        createDish(input: {
+          restaurantId: ${fakeRestaurantId},
+          name: "fried",
+          price: 10,
+          description: "pure chicken"
+          options: [
+            {
+              name: "Spice Level",
+              choices: [{name: "1"}, {name: "2"}],
+              extra: 0
+            },
+            {
+              name: "Size",
+              choices: [{name: "1", extra: 2}, {name: "2", extra: 4}],
+              extra: 0
+            },
+            {
+              name: "Pickle",
+              extra: 1
+            }
+          ]
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { createDish },
+            },
+          } = res;
+          expect(createDish.ok).toBe(false);
+          expect(createDish.error).toBe('Restaurant Not Found');
+        });
+    });
+
+    it('should return failed not match owenr', () => {
+      return secondUserPrivateTest(`
+      mutation {
+        createDish(input: {
+          restaurantId: ${restaurantId},
+          name: "fried",
+          price: 10,
+          description: "pure chicken"
+          options: [
+            {
+              name: "Spice Level",
+              choices: [{name: "1"}, {name: "2"}],
+              extra: 0
+            },
+            {
+              name: "Size",
+              choices: [{name: "1", extra: 2}, {name: "2", extra: 4}],
+              extra: 0
+            },
+            {
+              name: "Pickle",
+              extra: 1
+            }
+          ]
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { createDish },
+            },
+          } = res;
+          expect(createDish.ok).toBe(false);
+          expect(createDish.error).toBe('You Can`t do that');
+        });
+    });
+  });
+
+  describe('editDish', () => {
+    const dishId = 1;
+    const fakeDishId = 9999;
+    it('should return success editDish', () => {
+      return privateTest(`
+      mutation {
+        editDish(input: {
+          name: "newDish",
+          price: 555,
+          description: "newDescription"
+          dishId: ${dishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { editDish },
+            },
+          } = res;
+
+          expect(editDish.ok).toBe(true);
+          expect(editDish.error).toBe(null);
+        });
+    });
+
+    it('should return failed not found dish', () => {
+      return privateTest(`
+      mutation {
+        editDish(input: {
+          name: "newDish",
+          price: 555,
+          description: "newDescription"
+          dishId: ${fakeDishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { editDish },
+            },
+          } = res;
+
+          expect(editDish.ok).toBe(false);
+          expect(editDish.error).toBe('Dish Not Found');
+        });
+    });
+
+    it('should return failed not match owenr', () => {
+      return secondUserPrivateTest(`
+      mutation {
+        editDish(input: {
+          name: "newDish",
+          price: 555,
+          description: "newDescription"
+          dishId: ${dishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { editDish },
+            },
+          } = res;
+
+          expect(editDish.ok).toBe(false);
+          expect(editDish.error).toBe('You can`t do that');
+        });
+    });
+  });
+
+  describe('createOrder', () => {
+    const restaurantId = 1;
+    const fakeRestaurantId = 9999;
+    const dishId = 1;
+    const fakeDishId = 9999;
+
+    it('should return success createOrder', () => {
+      return ClientPrivateTest(`
+      mutation {
+        createOrder(input: {
+          restaurantId: ${restaurantId},
+          items: [
+            {
+              dishId: ${dishId},
+              options: [
+                { name: "Spice Level", choices: "1" },
+                { name: "Size", choices: "1" }
+              ]
+            }
+          ]
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          console.log(res.body);
+          const {
+            body: {
+              data: { createOrder },
+            },
+          } = res;
+          expect(createOrder.ok).toBe(true);
+          expect(createOrder.error).toBe(null);
+        });
+    });
+
+    it('should return failed not found restaurant', () => {
+      return ClientPrivateTest(`
+        mutation {
+          createOrder(input: {
+            restaurantId: ${fakeRestaurantId},
+            items: [
+              {
+                dishId: ${dishId},
+                options: [
+                  { name: "Spice Level", choices: "1" },
+                  { name: "Size", choices: "1" }
+                ]
+              }
+            ]
+          }) {
+            ok
+            error
+          }
+        }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { createOrder },
+            },
+          } = res;
+
+          expect(createOrder.ok).toBe(false);
+          expect(createOrder.error).toBe('Restaurant Not Found');
+        });
+    });
+
+    it('should return failed not found dish', () => {
+      return ClientPrivateTest(`
+        mutation {
+          createOrder(input: {
+            restaurantId: ${restaurantId},
+            items: [
+              {
+                dishId: ${fakeDishId},
+                options: [
+                  { name: "Spice Level", choices: "1" },
+                  { name: "Size", choices: "1" }
+                ]
+              }
+            ]
+          }) {
+            ok
+            error
+          }
+        }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { createOrder },
+            },
+          } = res;
+
+          expect(createOrder.ok).toBe(false);
+          expect(createOrder.error).toBe('Dish Not Found');
+        });
+    });
+  });
+
+  describe('deleteDish', () => {
+    const dishId = 1;
+    const fakeDishId = 9999;
+    it('should return not found dish', () => {
+      return privateTest(`
+      mutation {
+        deleteDish(input: {
+          dishId: ${fakeDishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { deleteDish },
+            },
+          } = res;
+          expect(deleteDish.ok).toBe(false);
+          expect(deleteDish.error).toBe('Dish Not Found');
+        });
+    });
+
+    it('should return not match owner', () => {
+      return secondUserPrivateTest(`
+      mutation {
+        deleteDish(input: {
+          dishId: ${dishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { deleteDish },
+            },
+          } = res;
+          expect(deleteDish.ok).toBe(false);
+          expect(deleteDish.error).toBe('You can`t do that');
+        });
+    });
+
+    it('should return success deleteDish', () => {
+      return privateTest(`
+      mutation {
+        deleteDish(input: {
+          dishId: ${dishId},
+        }) {
+          ok
+          error
+        }
+      }
+      `)
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { deleteDish },
+            },
+          } = res;
+          expect(deleteDish.ok).toBe(true);
+          expect(deleteDish.error).toBe(null);
         });
     });
   });

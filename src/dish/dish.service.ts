@@ -1,12 +1,10 @@
 import { RestaurantRepository } from '../restaurants/repositories/restaurant.repository';
-import { CategoryRepository } from '../restaurants/repositories/categories.repository';
 import { Injectable } from '@nestjs/common';
 import { DishRepository } from './repository/dishes-repository';
 import { CreateDishInput, CreateDishOutput } from './dtos/create-dish.dto';
 import { User } from 'src/users/entities/user.entity';
 import { EditDishInput, EditDishOutput } from './dtos/edit-dish.dto';
 import { DeleteDishInput, DeleteDishOutput } from './dtos/delete-dish.dto';
-import { Dish } from './entites/dish.entity';
 
 @Injectable()
 export class DishService {
@@ -36,10 +34,9 @@ export class DishService {
           error: 'You Can`t do that',
         };
       }
-      const dish = await this.dishes.save(
+      await this.dishes.save(
         this.dishes.create({ ...createDishInput, restaurant }),
       );
-      console.log(dish);
 
       return {
         ok: true,
@@ -57,11 +54,11 @@ export class DishService {
     editDishInput: EditDishInput,
   ): Promise<EditDishOutput> {
     try {
-      const dish = await this.dishes.findOne({
-        where: { id: editDishInput.dishId },
-        relations: ['restaurant'],
-      });
-      const IsNotMatchOnwer = this.IsOnwerCheck(dish, owner);
+      const IsNotMatchOnwer = await this.dishes.findOneOrThrow(
+        owner,
+        editDishInput.dishId,
+      );
+
       if (IsNotMatchOnwer) return IsNotMatchOnwer;
 
       await this.dishes.save([
@@ -76,7 +73,7 @@ export class DishService {
     } catch {
       return {
         ok: false,
-        error: 'Could not DeleteDish',
+        error: 'Could not EditDish',
       };
     }
   }
@@ -86,14 +83,14 @@ export class DishService {
     deleteDishInput: DeleteDishInput,
   ): Promise<DeleteDishOutput> {
     try {
-      const dish = await this.dishes.findOne({
-        where: { id: deleteDishInput.dishId },
-        relations: ['restaurant'],
-      });
-      const IsNotMatchOnwer = this.IsOnwerCheck(dish, owner);
-      if (IsNotMatchOnwer) return IsNotMatchOnwer;
+      const IsMatch = await this.dishes.findOneOrThrow(
+        owner,
+        deleteDishInput.dishId,
+      );
 
-      await this.dishes.delete(dish.id);
+      if (IsMatch) return IsMatch;
+
+      await this.dishes.delete(deleteDishInput.dishId);
       return {
         ok: true,
       };
@@ -101,22 +98,6 @@ export class DishService {
       return {
         ok: false,
         error: 'Could not DeleteDish',
-      };
-    }
-  }
-
-  IsOnwerCheck(dish: Dish, owner: User) {
-    if (!dish) {
-      return {
-        ok: false,
-        error: 'Dish Not Found',
-      };
-    }
-
-    if (dish.restaurant.ownerId !== owner.id) {
-      return {
-        ok: false,
-        error: 'You can`t do that',
       };
     }
   }
