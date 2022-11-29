@@ -24,6 +24,7 @@ import { Dish } from './dish/entites/dish.entity';
 import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -44,11 +45,17 @@ import { OrderItem } from './orders/entities/order-item.entity';
         EMAIL_FROM_EMAIL: Joi.string().required(),
       }),
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRoot({
       driver: ApolloDriver,
+      subscriptions: {
+        'subscriptions-transport-ws': {
+          onConnect: (connectionParams: any) => ({
+            token: connectionParams['x-jwt'],
+          }),
+        },
+      },
       autoSchemaFile: true,
-      cors: { origin: true, credentials: true },
-      context: ({ req }) => ({ req }),
+      context: ({ req }) => ({ token: req.headers['x-jwt'] }), //http와 ws 따로 설정한다.
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -86,15 +93,9 @@ import { OrderItem } from './orders/entities/order-item.entity';
     RestaurantsModule,
     DishModule,
     OrdersModule,
+    CommonModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes({
-      path: '/graphql',
-      method: RequestMethod.POST,
-    });
-  }
-}
+export class AppModule {}
