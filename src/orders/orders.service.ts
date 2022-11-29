@@ -18,6 +18,7 @@ import {
 } from '../common/common.constants';
 import { PubSub } from 'graphql-subscriptions';
 import { TakeOrderInput, TakeOrderOutput } from './dtos/take-order.dto';
+import { In } from 'typeorm';
 
 @Injectable()
 export class OrdersService {
@@ -117,7 +118,7 @@ export class OrdersService {
             ...(status && { status }),
           },
           take: 20,
-          skip: (page - 1) * 25,
+          skip: (page - 1) * 20,
         });
       } else if (user.role === UserRole.Delivery) {
         orders = await this.orders.find({
@@ -126,23 +127,26 @@ export class OrdersService {
             ...(status && { status }),
           },
           take: 20,
-          skip: (page - 1) * 25,
+          skip: (page - 1) * 20,
         });
       } else if (user.role === UserRole.Owner) {
         const restaurant = await this.restaurants.find({
           where: {
             owner: { id: user.id },
           },
-          relations: ['orders'],
         });
-        orders = restaurant.map((restaurant) => restaurant.orders).flat(1);
-        if (status) {
-          orders = orders.filter((order) => order.status === status);
-        }
+        const arr = restaurant.map((item) => item.id);
+        orders = await this.orders.find({
+          where: {
+            restaurant: { id: In(arr) },
+          },
+          relations: ['restaurant'],
+          take: 20,
+          skip: (page - 1) * 20,
+        });
       }
-
       return {
-        ok: false,
+        ok: true,
         orders,
       };
     } catch {

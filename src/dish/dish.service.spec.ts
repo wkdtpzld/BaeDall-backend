@@ -33,6 +33,7 @@ const userArgs: User = {
   restaurants: null,
   orders: null,
   rides: null,
+  payments: null,
 };
 
 describe('dishService', () => {

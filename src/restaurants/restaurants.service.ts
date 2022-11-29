@@ -161,7 +161,7 @@ export class RestaurantService {
           category: { id: category.id },
         },
         take: 20,
-        skip: (page - 1) * 25,
+        skip: (page - 1) * 20,
       });
       category.restaurants = restaurants;
       const totalResults = await this.countRestaurant(category);
