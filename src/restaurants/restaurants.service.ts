@@ -156,18 +156,22 @@ export class RestaurantService {
           error: 'Category not found',
         };
       }
-      const restaurants = await this.restaurants.find({
+      const restaurant = await this.restaurants.find({
         where: {
           category: { id: category.id },
+        },
+        order: {
+          isPromoted: 'DESC',
+          createdAt: 'DESC',
         },
         take: 20,
         skip: (page - 1) * 20,
       });
-      category.restaurants = restaurants;
       const totalResults = await this.countRestaurant(category);
       return {
         ok: true,
         category,
+        restaurant,
         totalPage: Math.ceil(totalResults / 20),
         totalItems: totalResults,
       };
@@ -184,6 +188,9 @@ export class RestaurantService {
       const [restaurants, totalResults] = await this.restaurants.findAndCount({
         skip: (page - 1) * 20,
         take: 20,
+        order: {
+          isPromoted: 'DESC',
+        },
       });
 
       return {
